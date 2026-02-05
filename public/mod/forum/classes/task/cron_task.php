@@ -340,6 +340,10 @@ class cron_task extends \core\task\scheduled_task {
             // Setup this user so that the capabilities are cached, and environment matches receiving user.
             \core\cron::setup_user($user);
 
+            // Collect circular references to prevent memory exhaustion.
+            // setup_user() creates context objects and capability caches that form circular references.
+            gc_collect_cycles();
+
             list($individualpostdata, $digestpostdata) = $this->fetch_posts_for_user($user);
 
             if (!empty($digestpostdata)) {
