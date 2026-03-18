@@ -340,8 +340,13 @@ class cron_task extends \core\task\scheduled_task {
             // Setup this user so that the capabilities are cached, and environment matches receiving user.
             \core\cron::setup_user($user);
 
-            // Collect circular references to prevent memory exhaustion.
-            // setup_user() creates context objects and capability caches that form circular references.
+            // Force the PHP cycle collector to free orphaned course_modinfo objects.
+            // fetch_posts_for_user() calls get_fast_modinfo() which creates course_modinfo
+            // objects containing cm_info children. These have circular references
+            // (cm_info->modinfo and modinfo->cms) that PHP's refcount GC cannot free.
+            // When the next user iteration calls setup_user(), modinfo::instance() detects
+            // the user change and clears its static cache, but the circular references keep
+            // the old objects alive. Without this call, memory grows linearly with user count.
             gc_collect_cycles();
 
             list($individualpostdata, $digestpostdata) = $this->fetch_posts_for_user($user);
