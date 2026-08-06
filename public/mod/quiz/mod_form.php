@@ -80,7 +80,7 @@ class mod_quiz_mod_form extends moodleform_mod {
             $mform->setType('name', PARAM_CLEANHTML);
         }
         $mform->addRule('name', null, 'required', null, 'client');
-        $mform->addRule('name', get_string('maximumchars', '', 1333), 'maxlength', 1333, 'client');
+        $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
 
         // Introduction.
         $this->standard_intro_elements(get_string('introduction', 'quiz'));
@@ -105,6 +105,10 @@ class mod_quiz_mod_form extends moodleform_mod {
         $mform->addElement('select', 'overduehandling', get_string('overduehandling', 'quiz'),
                 quiz_get_overdue_handling_options());
         $mform->addHelpButton('overduehandling', 'overduehandling', 'quiz');
+
+        // Multi-stage timer periods (core).
+        // insertElementBefore needs overduehandling to exist first.
+        \mod_quiz\local\timer\stage_settings::add_settings_form_fields($this, $mform);
         // TODO Formslib does OR logic on disableif, and we need AND logic here.
         // $mform->disabledIf('overduehandling', 'timelimit', 'eq', 0);
         // $mform->disabledIf('overduehandling', 'timeclose', 'eq', 0);
@@ -115,24 +119,18 @@ class mod_quiz_mod_form extends moodleform_mod {
         $mform->addHelpButton('graceperiod', 'graceperiod', 'quiz');
         $mform->hideIf('graceperiod', 'overduehandling', 'neq', 'graceperiod');
 
-        // Pre-create attempts.
-        // This is only shown if "Pre-create period" as been set at site level, and the quiz open time is enabled.
-        $precreateperiod = get_config('quiz', 'precreateperiod');
-        if (!empty($precreateperiod)) {
-            $yesoption = get_string('precreateyes', 'quiz', $precreateperiod / HOURSECS);
-            $precreateoptions = [
-                1 => $yesoption,
-                0 => get_string('no'),
-            ];
-            $mform->addElement(
-                'select',
-                'precreateattempts',
-                get_string('precreateattempts', 'quiz'),
-                $precreateoptions
-            );
-            $mform->hideIf('precreateattempts', 'timeopen[enabled]');
-            $mform->addHelpButton('precreateattempts', 'precreateattempts', 'quiz');
-        }
+        $notifyoptions = [
+            -1 => get_string('timernotifyinherit', 'quiz'),
+            1 => get_string('enabled', 'core'),
+            0 => get_string('disabled', 'core'),
+        ];
+        $mform->addElement('select', 'timernotifydegraded', get_string('timernotifydegraded', 'quiz'), $notifyoptions);
+        $mform->addHelpButton('timernotifydegraded', 'timernotifydegraded', 'quiz');
+        $mform->setDefault('timernotifydegraded', -1);
+
+        $mform->addElement('select', 'timernotifysuccess', get_string('timernotifysuccess', 'quiz'), $notifyoptions);
+        $mform->addHelpButton('timernotifysuccess', 'timernotifysuccess', 'quiz');
+        $mform->setDefault('timernotifysuccess', -1);
 
         // -------------------------------------------------------------------------------
         // Grade settings.
@@ -484,6 +482,12 @@ class mod_quiz_mod_form extends moodleform_mod {
             $toform['timelimitenable'] = $toform['timelimit'] > 0;
         }
 
+        foreach (['timernotifydegraded', 'timernotifysuccess'] as $notifyfield) {
+            if (!array_key_exists($notifyfield, $toform) || $toform[$notifyfield] === null) {
+                $toform[$notifyfield] = -1;
+            }
+        }
+
         $this->preprocessing_review_settings($toform, 'during',
                 display_options::DURING);
         $this->preprocessing_review_settings($toform, 'immediately',
@@ -506,6 +510,9 @@ class mod_quiz_mod_form extends moodleform_mod {
         if (!empty($toform['instance'])) {
             $accesssettings = access_manager::load_settings($toform['instance']);
             foreach ($accesssettings as $name => $value) {
+                $toform[$name] = $value;
+            }
+            foreach (\mod_quiz\local\timer\stage_settings::get_extra_settings($toform['instance']) as $name => $value) {
                 $toform[$name] = $value;
             }
         }
@@ -623,6 +630,7 @@ class mod_quiz_mod_form extends moodleform_mod {
         }
         // Any other rule plugins.
         $errors = access_manager::validate_settings_form_fields($errors, $data, $files, $this);
+        $errors = \mod_quiz\local\timer\stage_settings::validate_settings_form_fields($errors, $data);
 
         return $errors;
     }

@@ -1,4 +1,4 @@
-@mod @mod_quiz
+@mod @mod_quiz @quiz_timer
 Feature: Attempt quiz with password and time limit
   In order to attempt a quiz with password and time limit
   As a teacher

@@ -54,7 +54,6 @@ list($thispageurl, $contexts, $cmid, $cm, $quiz, $pagevars) =
 
 $PAGE->set_url($thispageurl);
 $PAGE->set_secondary_active_tab("mod_quiz_edit");
-$PAGE->set_show_navigation_footer(false);
 
 // You need mod/quiz:manage in addition to question capabilities to access this page.
 require_capability('mod/quiz:manage', $contexts->lowest());
@@ -125,7 +124,7 @@ if (optional_param('add', false, PARAM_BOOL) && confirm_sesskey()) {
     redirect($afteractionurl);
 }
 
-if (($addsectionatpage = optional_param('addsectionatpage', false, PARAM_INT)) && confirm_sesskey()) {
+if ($addsectionatpage = optional_param('addsectionatpage', false, PARAM_INT)) {
     // Add a section to the quiz.
     $structure->check_can_be_edited();
     $structure->add_section_heading($addsectionatpage);

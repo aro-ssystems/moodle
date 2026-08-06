@@ -313,4 +313,12 @@ $functions = [
         'capabilities' => 'mod/quiz:manage',
         'ajax' => true,
     ],
+
+    'mod_quiz_get_timer_state' => [
+        'classname' => 'mod_quiz\external\get_timer_state',
+        'description' => 'Return server-authoritative timer state for a quiz attempt.',
+        'type' => 'read',
+        'capabilities' => 'mod/quiz:attempt',
+        'ajax' => true,
+    ],
 ];

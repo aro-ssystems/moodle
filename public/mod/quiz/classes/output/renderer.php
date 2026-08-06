@@ -27,6 +27,8 @@ use mod_quiz\access_manager;
 use mod_quiz\form\preflight_check_form;
 use mod_quiz\output\grades\grade_out_of;
 use mod_quiz\question\display_options;
+use mod_quiz\local\timer\notification_config;
+use mod_quiz\local\timer\timer_state_exporter;
 use mod_quiz\quiz_attempt;
 use moodle_url;
 use plugin_renderer_base;
@@ -319,19 +321,44 @@ class renderer extends plugin_renderer_base {
      */
     public function countdown_timer(quiz_attempt $attemptobj, $timenow) {
 
-        $timeleft = $attemptobj->get_time_left_display($timenow);
-        if ($timeleft !== false) {
-            $ispreview = $attemptobj->is_preview();
-            $timerstartvalue = $timeleft;
-            if (!$ispreview) {
-                // Make sure the timer starts just above zero. If $timeleft was <= 0, then
-                // this will just have the effect of causing the quiz to be submitted immediately.
-                $timerstartvalue = max($timerstartvalue, 1);
-            }
-            $this->initialise_timer($timerstartvalue, $ispreview);
+        $state = timer_state_exporter::export_for_attempt($attemptobj, $timenow);
+        $rendermarkup = $state['timeleft'] >= 0;
+        $needsclienttimeup = $state['attemptstate'] === quiz_attempt::IN_PROGRESS
+            && $state['timeleft'] <= 0;
+
+        if ($rendermarkup || $needsclienttimeup) {
+            $this->page->requires->strings_for_js(
+                ['timestring', 'timesup', 'timersyncstale', 'timersyncerror', 'timersyncrestored'],
+                'quiz'
+            );
+            $notificationconfig = notification_config::resolve_for_quiz($attemptobj->get_quiz());
+            $this->page->requires->js_call_amd('mod_quiz/timer', 'init', [
+                $attemptobj->get_attemptid(),
+                $state,
+                (bool) $attemptobj->is_preview(),
+                $notificationconfig,
+            ]);
         }
 
-        return $this->output->render_from_template('mod_quiz/timer', (object) []);
+        if (!$rendermarkup) {
+            return '';
+        }
+
+        $stages = $state['stages'] ?? [];
+        $hastimestages = count($stages) > 1 ||
+            (count($stages) === 1 && ($stages[0]['endtime'] ?? 0) > 0);
+
+        $context = (object) [
+            'hastimestages' => $hastimestages,
+            'stages' => array_map(function($stage) {
+                return (object) $stage;
+            }, $stages),
+            'mustsubmitby' => $state['mustsubmitby'] ?? '',
+            'grantedextra' => !empty($state['grantedextra']),
+            'grantedextratime' => get_string('timergrantedextratime', 'quiz'),
+        ];
+
+        return $this->output->render_from_template('mod_quiz/timer', $context);
     }
 
     /**
@@ -534,11 +561,7 @@ class renderer extends plugin_renderer_base {
      */
     public function during_attempt_tertiary_nav($quizviewurl): string {
         $output = '';
-        if ($this->page->pagelayout === 'secure') {
-            // Do not show the back button in the secure layout on quiz pages.
-            return $output;
-        }
-        $output .= html_writer::start_div('tertiary-navigation');
+        $output .= html_writer::start_div('container-fluid tertiary-navigation');
         $output .= html_writer::start_div('row');
         $output .= html_writer::start_div('navitem');
         $output .= html_writer::link($quizviewurl, get_string('back'),
@@ -676,16 +699,6 @@ class renderer extends plugin_renderer_base {
         return html_writer::div(html_writer::empty_tag('input', $attributes));
     }
 
-    /**
-     * Initialise the JavaScript required to initialise the countdown timer.
-     *
-     * @param int $timerstartvalue time remaining, in seconds.
-     * @param bool $ispreview true if this is a preview attempt.
-     */
-    public function initialise_timer($timerstartvalue, $ispreview) {
-        $options = [$timerstartvalue, (bool) $ispreview];
-        $this->page->requires->js_init_call('M.mod_quiz.timer.init', $options, false, quiz_get_js_module());
-    }
 
     /**
      * Output a page with an optional message, and JavaScript code to close the
@@ -760,7 +773,7 @@ class renderer extends plugin_renderer_base {
     public function summary_table($attemptobj, $displayoptions) {
         // Prepare the summary table header.
         $table = new html_table();
-        $table->attributes['class'] = 'table generaltable table-striped quizsummaryofattempt table-hover';
+        $table->attributes['class'] = 'generaltable quizsummaryofattempt boxaligncenter';
         $table->head = [get_string('question', 'quiz'), get_string('status', 'quiz')];
         $table->align = ['left', 'left'];
         $table->size = ['', ''];
@@ -927,17 +940,16 @@ class renderer extends plugin_renderer_base {
             $attemptbtn = $this->start_attempt_button($viewobj->buttontext,
                     $viewobj->startattempturl, $viewobj->preflightcheckform,
                     $viewobj->popuprequired, $viewobj->popupoptions);
-            $content .= html_writer::div($attemptbtn, 'navitem');
+            $content .= $attemptbtn;
         }
 
         if ($viewobj->canedit && !$viewobj->quizhasquestions) {
-            $addquestionbutton = html_writer::link($viewobj->editurl, get_string('addquestion', 'quiz'),
+            $content .= html_writer::link($viewobj->editurl, get_string('addquestion', 'quiz'),
                     ['class' => 'btn btn-secondary']);
-            $content .= html_writer::div($addquestionbutton, 'navitem');
         }
 
         if ($content) {
-            return html_writer::div(html_writer::div($content, 'd-flex'), 'tertiary-navigation');
+            return html_writer::div(html_writer::div($content, 'row'), 'container-fluid tertiary-navigation');
         } else {
             return '';
         }
@@ -1000,6 +1012,32 @@ class renderer extends plugin_renderer_base {
                         '#mod_quiz_preflight_form', $popupjsoptions]);
 
         return $this->render($button) . ($preflightcheckform ? $preflightcheckform->render() : '');
+    }
+
+    /**
+     * Generate a message saying that this quiz has no questions, with a button to
+     * go to the edit page, if the user has the right capability.
+     *
+     * @param bool $canedit can the current user edit the quiz?
+     * @param moodle_url $editurl URL of the edit quiz page.
+     * @return string HTML to output.
+     *
+     * @deprecated since Moodle 4.0 MDL-71915 - please do not use this function any more.
+     */
+    public function no_questions_message($canedit, $editurl) {
+        debugging('no_questions_message() is deprecated, please use generate_no_questions_message() instead.', DEBUG_DEVELOPER);
+
+        $output = html_writer::start_tag('div', ['class' => 'card text-center mb-3']);
+        $output .= html_writer::start_tag('div', ['class' => 'card-body']);
+
+        $output .= $this->notification(get_string('noquestions', 'quiz'), 'warning', false);
+        if ($canedit) {
+            $output .= $this->single_button($editurl, get_string('editquiz', 'quiz'), 'get');
+        }
+        $output .= html_writer::end_tag('div');
+        $output .= html_writer::end_tag('div');
+
+        return $output;
     }
 
     /**
@@ -1119,7 +1157,7 @@ class renderer extends plugin_renderer_base {
 
         // Prepare table header.
         $table = new html_table();
-        $table->attributes['class'] = 'table generaltable quizattemptsummary table-hover';
+        $table->attributes['class'] = 'generaltable quizattemptsummary';
         $table->caption = get_string('summaryofattempts', 'quiz');
         $table->captionhide = true;
         $table->head = [];
@@ -1454,5 +1492,41 @@ class renderer extends plugin_renderer_base {
         return html_writer::tag('div', $warning,
                         ['id' => 'connection-error', 'style' => 'display: none;', 'role' => 'alert']) .
                 html_writer::tag('div', $ok, ['id' => 'connection-ok', 'style' => 'display: none;', 'role' => 'alert']);
+    }
+
+    /**
+     * Deprecated version of render_links_to_other_attempts.
+     *
+     * @param links_to_other_attempts $links
+     * @return string HTML fragment.
+     * @deprecated since Moodle 4.2. Please use render_links_to_other_attempts instead.
+     * @todo MDL-76612 Final deprecation in Moodle 4.6
+     */
+    protected function render_mod_quiz_links_to_other_attempts(links_to_other_attempts $links) {
+        return $this->render_links_to_other_attempts($links);
+    }
+
+    /**
+     * Deprecated version of render_navigation_question_button.
+     *
+     * @param navigation_question_button $button
+     * @return string HTML fragment.
+     * @deprecated since Moodle 4.2. Please use render_links_to_other_attempts instead.
+     * @todo MDL-76612 Final deprecation in Moodle 4.6
+     */
+    protected function render_quiz_nav_question_button(navigation_question_button $button) {
+        return $this->render_navigation_question_button($button);
+    }
+
+    /**
+     * Deprecated version of render_navigation_section_heading.
+     *
+     * @param navigation_section_heading $heading the heading.
+     * @return string HTML fragment.
+     * @deprecated since Moodle 4.2. Please use render_links_to_other_attempts instead.
+     * @todo MDL-76612 Final deprecation in Moodle 4.6
+     */
+    protected function render_quiz_nav_section_heading(navigation_section_heading $heading) {
+        return $this->render_navigation_section_heading($heading);
     }
 }

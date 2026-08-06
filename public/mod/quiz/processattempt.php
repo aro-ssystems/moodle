@@ -100,9 +100,6 @@ if ($status == quiz_attempt::OVERDUE) {
 } else if ($status == quiz_attempt::IN_PROGRESS) {
     redirect($nexturl);
 } else {
-    if ($status == quiz_attempt::FINISHED) {
-        \core\notification::add(get_string('attemptsubmitted', 'quiz'), \core\notification::INFO);
-    }
     // Attempt abandoned or finished.
     redirect($attemptobj->review_url());
 }

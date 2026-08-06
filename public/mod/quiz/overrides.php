@@ -74,7 +74,6 @@ $PAGE->activityheader->disable();
 
 // Activate the secondary nav tab.
 $PAGE->set_secondary_active_tab("mod_quiz_useroverrides");
-$PAGE->set_show_navigation_footer(false);
 
 // Delete orphaned group overrides.
 $sql = 'SELECT o.id

@@ -85,7 +85,7 @@ Feature: Edit quiz page - remove questions
     Then "Delete" "link" in the "Question C" "list_item" should be visible
 
   @javascript
-  Scenario: Can delete the last question in a quiz using delete icon.
+  Scenario: Can delete the last question in a quiz.
     Given the following "questions" exist:
       | questioncategory | qtype     | name       | questiontext        |
       | Test questions   | truefalse | Question A | This is question 01 |

@@ -18,6 +18,8 @@ namespace mod_quiz;
 
 use core_component;
 use mod_quiz\form\preflight_check_form;
+use mod_quiz\local\timer\stage_settings;
+use mod_quiz\local\timer\stage_timelimit;
 use mod_quiz\local\access_rule_base;
 use mod_quiz\output\renderer;
 use mod_quiz\question\display_options;
@@ -89,6 +91,14 @@ class access_manager {
 
         foreach ($superceededrules as $superceededrule) {
             unset($rules['quizaccess_' . $superceededrule]);
+        }
+
+        $stagerule = stage_timelimit::make($quizobj, $timenow, $canignoretimelimits);
+        if ($stagerule) {
+            $rules[stage_timelimit::class] = $stagerule;
+            foreach ($stagerule->get_superceded_rules() as $superceededrule) {
+                unset($rules['quizaccess_' . $superceededrule]);
+            }
         }
 
         return $rules;
@@ -166,6 +176,8 @@ class access_manager {
         foreach (self::get_rule_classes() as $rule) {
             $rule::save_settings($quiz);
         }
+
+        stage_settings::save_from_form($quiz);
     }
 
     /**
@@ -183,6 +195,8 @@ class access_manager {
         foreach (self::get_rule_classes() as $rule) {
             $rule::delete_settings($quiz);
         }
+
+        stage_settings::delete_for_quiz($quiz->id);
     }
 
     /**
@@ -250,6 +264,8 @@ class access_manager {
             $data += $rule::get_extra_settings($quizid);
         }
 
+        $data += stage_settings::get_extra_settings($quizid);
+
         return $data;
     }
 
@@ -274,6 +290,10 @@ class access_manager {
             foreach ($rule::get_extra_settings($quizid) as $name => $value) {
                 $quiz->$name = $value;
             }
+        }
+
+        foreach (stage_settings::get_extra_settings($quizid) as $name => $value) {
+            $quiz->$name = $value;
         }
 
         return $quiz;

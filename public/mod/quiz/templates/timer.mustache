@@ -17,18 +17,63 @@
 {{!
     @template mod_quiz/timer
 
-    Login page template
+    Unified quiz countdown timer (standard and multi-stage).
 
     Example context (json):
     {
+        "hastimestages": true,
+        "stages": [
+            {"endtime": 3600, "display": "Main time: 3 hours"},
+            {"endtime": 0, "display": "Upload time: 17 mins"}
+        ],
+        "mustsubmitby": "",
+        "grantedextra": false,
+        "grantedextratime": "You have been granted extra time."
     }
 }}
-<div id="quiz-timer-wrapper" class="mb-2">
-    <div id="quiz-timer" class="quiz-timer-inner py-1 px-2 ms-auto" role="timer" aria-atomic="true" aria-relevant="text">
-        {{#str}} timeleft, quiz {{/str}}
-        <span id="quiz-time-left"></span>
+<div id="quiz-timer-wrapper" class="mb-2 mod-quiz-timer-wrapper d-none" data-region="quiz-timer-root">
+    {{#hastimestages}}
+    <div class="d-flex align-items-center" data-region="timer-body">
+        <div id="stage-timer-header" class="card-stages-title py-1 me-auto" title="{{#str}} timerstageshelp, quiz {{/str}}">
+            {{#str}} timerstages, quiz {{/str}}
+        </div>
+        <button type="button" class="btn btn-secondary btn-small" id="toggle-timer" aria-controls="quiz-timer-stages">
+            {{#str}} hide, core {{/str}}
+        </button>
     </div>
-    <button type="button" class="btn btn-secondary btn-small ms-1" id="toggle-timer" aria-controls="quiz-timer" aria-describedby="quiz-timer">
-        {{#str}} hide, core {{/str}}
-    </button>
+    <ul id="quiz-timer-stages" class="stagetimer list-unstyled mb-0" role="presentation">
+        {{#stages}}
+        <li data-end-time="{{endtime}}">
+            <span class="description">{{display}}</span>
+            <span class="timedisplay" role="timer" aria-live="polite" aria-atomic="true">
+                <br>
+                {{#str}} timeleft, quiz {{/str}}
+                <span class="timeleft"></span>
+            </span>
+        </li>
+        {{/stages}}
+    </ul>
+    {{/hastimestages}}
+
+    {{^hastimestages}}
+    <div class="d-flex align-items-center">
+        <div id="quiz-timer" class="quiz-timer-inner py-1 px-2 ms-auto" role="timer" aria-live="polite" aria-atomic="true" aria-relevant="text">
+            {{#str}} timeleft, quiz {{/str}}
+            <span id="quiz-time-left" class="timeleft"></span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-small ms-1" id="toggle-timer" aria-controls="quiz-timer" aria-describedby="quiz-timer">
+            {{#str}} hide, core {{/str}}
+        </button>
+    </div>
+    {{/hastimestages}}
+
+    {{#grantedextra}}
+    <div class="mt-2 granted-extra-time">
+        <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+        <span>{{grantedextratime}}</span>
+    </div>
+    {{/grantedextra}}
+    {{#mustsubmitby}}
+    <div class="mustsubmitby mt-2">{{mustsubmitby}}</div>
+    {{/mustsubmitby}}
 </div>
