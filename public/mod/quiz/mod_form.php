@@ -115,6 +115,10 @@ class mod_quiz_mod_form extends moodleform_mod {
         $mform->addElement('select', 'overduehandling', get_string('overduehandling', 'quiz'),
                 quiz_get_overdue_handling_options());
         $mform->addHelpButton('overduehandling', 'overduehandling', 'quiz');
+
+        // Multi-stage timer periods (core).
+        // insertElementBefore needs overduehandling to exist first.
+        \mod_quiz\local\timer\stage_settings::add_settings_form_fields($this, $mform);
         // TODO Formslib does OR logic on disableif, and we need AND logic here.
         // $mform->disabledIf('overduehandling', 'timelimit', 'eq', 0);
         // $mform->disabledIf('overduehandling', 'timeclose', 'eq', 0);
@@ -143,6 +147,19 @@ class mod_quiz_mod_form extends moodleform_mod {
             $mform->hideIf('precreateattempts', 'timeopen[enabled]');
             $mform->addHelpButton('precreateattempts', 'precreateattempts', 'quiz');
         }
+
+        $notifyoptions = [
+            -1 => get_string('timernotifyinherit', 'quiz'),
+            1 => get_string('enabled', 'core'),
+            0 => get_string('disabled', 'core'),
+        ];
+        $mform->addElement('select', 'timernotifydegraded', get_string('timernotifydegraded', 'quiz'), $notifyoptions);
+        $mform->addHelpButton('timernotifydegraded', 'timernotifydegraded', 'quiz');
+        $mform->setDefault('timernotifydegraded', -1);
+
+        $mform->addElement('select', 'timernotifysuccess', get_string('timernotifysuccess', 'quiz'), $notifyoptions);
+        $mform->addHelpButton('timernotifysuccess', 'timernotifysuccess', 'quiz');
+        $mform->setDefault('timernotifysuccess', -1);
 
         // -------------------------------------------------------------------------------
         // Grade settings.
