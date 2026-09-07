@@ -210,6 +210,11 @@ M.mod_quiz.autosave = {
 
         this.save_hidden_field_values();
         this.watch_hidden_fields();
+
+        // Monotone timer sync for near-timeup checks (secondary path; primary is WS poll).
+        require(['mod_quiz/timer/sync'], function(sync) {
+            this.timersync = sync;
+        }.bind(this));
     },
 
     save_hidden_field_values: function() {
@@ -380,9 +385,12 @@ M.mod_quiz.autosave = {
             return;
         }
 
+        // Secondary timer sync after autosave (Constitution XII); primary authority is WS poll.
         if (typeof autosavedata.timeleft !== 'undefined') {
             Y.log('Updating timer: ' + autosavedata.timeleft + ' seconds remain.', 'debug', 'moodle-mod_quiz-timer');
-            M.mod_quiz.timer.updateEndTime(autosavedata.timeleft);
+            require(['mod_quiz/timer'], function(timer) {
+                timer.applyServerTimeleft(autosavedata.timeleft);
+            });
         }
 
         this.update_saved_time_display();
@@ -440,8 +448,17 @@ M.mod_quiz.autosave = {
     },
 
     is_time_nearly_over: function() {
-        return M.mod_quiz.timer && M.mod_quiz.timer.endtime &&
-                (new Date().getTime() + 2 * this.delay) > M.mod_quiz.timer.endtime;
+        if (!this.timersync) {
+            return false;
+        }
+        if (this.timersync.isTimeExpired()) {
+            return true;
+        }
+        var display = this.timersync.getDisplaySecondsLeft();
+        if (display === null) {
+            return false;
+        }
+        return (display * 1000) < (2 * this.delay);
     },
 
     stop_autosaving: function() {
