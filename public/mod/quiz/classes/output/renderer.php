@@ -27,6 +27,8 @@ use mod_quiz\access_manager;
 use mod_quiz\form\preflight_check_form;
 use mod_quiz\output\grades\grade_out_of;
 use mod_quiz\question\display_options;
+use mod_quiz\local\timer\notification_config;
+use mod_quiz\local\timer\timer_state_exporter;
 use mod_quiz\quiz_attempt;
 use moodle_url;
 use plugin_renderer_base;
@@ -319,19 +321,44 @@ class renderer extends plugin_renderer_base {
      */
     public function countdown_timer(quiz_attempt $attemptobj, $timenow) {
 
-        $timeleft = $attemptobj->get_time_left_display($timenow);
-        if ($timeleft !== false) {
-            $ispreview = $attemptobj->is_preview();
-            $timerstartvalue = $timeleft;
-            if (!$ispreview) {
-                // Make sure the timer starts just above zero. If $timeleft was <= 0, then
-                // this will just have the effect of causing the quiz to be submitted immediately.
-                $timerstartvalue = max($timerstartvalue, 1);
-            }
-            $this->initialise_timer($timerstartvalue, $ispreview);
+        $state = timer_state_exporter::export_for_attempt($attemptobj, $timenow);
+        $rendermarkup = $state['timeleft'] >= 0;
+        $needsclienttimeup = $state['attemptstate'] === quiz_attempt::IN_PROGRESS
+            && $state['timeleft'] <= 0;
+
+        if ($rendermarkup || $needsclienttimeup) {
+            $this->page->requires->strings_for_js(
+                ['timestring', 'timesup', 'timersyncstale', 'timersyncerror', 'timersyncrestored'],
+                'quiz'
+            );
+            $notificationconfig = notification_config::resolve_for_quiz($attemptobj->get_quiz());
+            $this->page->requires->js_call_amd('mod_quiz/timer', 'init', [
+                $attemptobj->get_attemptid(),
+                $state,
+                (bool) $attemptobj->is_preview(),
+                $notificationconfig,
+            ]);
         }
 
-        return $this->output->render_from_template('mod_quiz/timer', (object) []);
+        if (!$rendermarkup) {
+            return '';
+        }
+
+        $stages = $state['stages'] ?? [];
+        $hastimestages = count($stages) > 1 ||
+            (count($stages) === 1 && ($stages[0]['endtime'] ?? 0) > 0);
+
+        $context = (object) [
+            'hastimestages' => $hastimestages,
+            'stages' => array_map(function($stage) {
+                return (object) $stage;
+            }, $stages),
+            'mustsubmitby' => $state['mustsubmitby'] ?? '',
+            'grantedextra' => !empty($state['grantedextra']),
+            'grantedextratime' => get_string('timergrantedextratime', 'quiz'),
+        ];
+
+        return $this->output->render_from_template('mod_quiz/timer', $context);
     }
 
     /**
@@ -674,17 +701,6 @@ class renderer extends plugin_renderer_base {
             $this->page->requires->js_call_amd('core_question/question_engine', 'initSubmitButton', [$attributes['id']]);
         }
         return html_writer::div(html_writer::empty_tag('input', $attributes));
-    }
-
-    /**
-     * Initialise the JavaScript required to initialise the countdown timer.
-     *
-     * @param int $timerstartvalue time remaining, in seconds.
-     * @param bool $ispreview true if this is a preview attempt.
-     */
-    public function initialise_timer($timerstartvalue, $ispreview) {
-        $options = [$timerstartvalue, (bool) $ispreview];
-        $this->page->requires->js_init_call('M.mod_quiz.timer.init', $options, false, quiz_get_js_module());
     }
 
     /**
