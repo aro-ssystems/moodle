@@ -1081,6 +1081,12 @@ function quiz_process_options($quiz) {
             $quiz->completionminattempts = 0;
         }
     }
+
+    foreach (['timernotifydegraded', 'timernotifysuccess'] as $notifyfield) {
+        if (property_exists($quiz, $notifyfield)) {
+            $quiz->$notifyfield = \mod_quiz\local\timer\notification_config::normalize_form_value((int) $quiz->$notifyfield);
+        }
+    }
 }
 
 /**
