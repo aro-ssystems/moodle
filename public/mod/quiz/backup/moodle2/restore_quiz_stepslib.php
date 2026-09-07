@@ -70,6 +70,7 @@ class restore_quiz_activity_structure_step extends restore_questions_activity_st
         $paths[] = new restore_path_element('quiz_section', '/activity/quiz/sections/section');
         $paths[] = new restore_path_element('quiz_feedback', '/activity/quiz/feedbacks/feedback');
         $paths[] = new restore_path_element('quiz_override', '/activity/quiz/overrides/override');
+        $paths[] = new restore_path_element('quiz_timer_stage', '/activity/quiz/quiz_timer_stages/quiz_timer_stage');
 
         if ($userinfo) {
             $paths[] = new restore_path_element('quiz_grade', '/activity/quiz/grades/grade');
@@ -533,6 +534,15 @@ class restore_quiz_activity_structure_step extends restore_questions_activity_st
 
         $newitemid = $DB->insert_record('quiz_feedback', $data);
         $this->set_mapping('quiz_feedback', $oldid, $newitemid, true); // Has related files.
+    }
+
+    protected function process_quiz_timer_stage($data) {
+        global $DB;
+
+        $data = (object) $data;
+        $data->quizid = $this->get_new_parentid('quiz');
+        unset($data->id);
+        $DB->insert_record('quiz_timer_stages', $data);
     }
 
     protected function process_quiz_override($data) {

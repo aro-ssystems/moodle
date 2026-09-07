@@ -109,6 +109,11 @@ class backup_quiz_activity_structure_step extends backup_questions_activity_stru
         $quiz->add_child($overrides);
         $overrides->add_child($override);
 
+        $timerstages = new backup_nested_element('quiz_timer_stages');
+        $timerstage = new backup_nested_element('quiz_timer_stage', ['id'], ['stages']);
+        $quiz->add_child($timerstages);
+        $timerstages->add_child($timerstage);
+
         $quiz->add_child($grades);
         $grades->add_child($grade);
 
@@ -125,6 +130,8 @@ class backup_quiz_activity_structure_step extends backup_questions_activity_stru
         $section->set_source_table('quiz_sections', ['quizid' => backup::VAR_PARENTID]);
 
         $feedback->set_source_table('quiz_feedback', ['quizid' => backup::VAR_PARENTID]);
+
+        $timerstage->set_source_table('quiz_timer_stages', ['quizid' => backup::VAR_PARENTID]);
 
         // Quiz overrides to backup are different depending of user info.
         $overrideparams = ['quiz' => backup::VAR_PARENTID];
