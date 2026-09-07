@@ -131,6 +131,12 @@ if ($ADMIN->fulltree) {
     $setting->set_locked_flag_options(admin_setting_flag::ENABLED, true);
     $quizsettings->add($setting);
 
+    $quizsettings->add(new admin_setting_configcheckbox('quiz/timernotifydegraded',
+            get_string('timernotifydegraded', 'quiz'), get_string('timernotifydegraded_help', 'quiz'), 1));
+
+    $quizsettings->add(new admin_setting_configcheckbox('quiz/timernotifysuccess',
+            get_string('timernotifysuccess', 'quiz'), get_string('timernotifysuccess_help', 'quiz'), 1));
+
     // Number of attempts.
     $options = [get_string('unlimited')];
     for ($i = 1; $i <= QUIZ_MAX_ATTEMPT_OPTION; $i++) {
