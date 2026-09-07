@@ -1217,3 +1217,81 @@ table.quizreviewsummary td.cell {
         page-break-inside: avoid;
     }
 }
+
+/*
+ * Unified quiz timer — staged layout only; simple timer uses Boost #quiz-timer rules.
+ * "Staged" = a quiz with a configured multi-stage timer (see mod_quiz\local\timer\stage_settings):
+ * renders as a list of time periods (ul.stagetimer) via the rules below.
+ * "Simple" = a quiz without configured stages (backward-compatible fallback): renders as the
+ * classic single countdown using Boost's own #quiz-timer selector, which is intentionally NOT
+ * duplicated here.
+ */
+.path-mod-quiz .mod-quiz-timer-wrapper ul.stagetimer {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper ul.stagetimer li {
+    display: block;
+    margin: 0;
+    padding: 4px 4px 4px 0;
+    border-bottom: 1px solid #bfe2ef;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li.past {
+    font-size: 0.85714em;
+    color: #595959;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li:not(.current) .timedisplay {
+    display: none;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li.current {
+    border-right: 4px solid #0b55a8;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li.current .description {
+    font-weight: bold;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li.future {
+    font-size: 0.85714em;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper .timeleft {
+    font-weight: bold;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li.warning {
+    color: #b25a00;
+    font-weight: bold;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper li.danger {
+    color: #ad1d00;
+    font-weight: bold;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper .mustsubmitby {
+    margin-top: 10px;
+    padding: 4px 0 4px 4px;
+    font-size: 0.85714em;
+    border-left: 4px solid #ad1d00;
+}
+
+.path-mod-quiz .mod-quiz-timer-wrapper .card-stages-title {
+    font-weight: bold;
+    color: #002158;
+}
+
+#page-mod-quiz-attempt #quiz-timer-wrapper.d-none {
+    display: none !important;
+}
+
+#page-mod-quiz-attempt #quiz-timer-wrapper:not(.d-none) {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.25rem;
+}
