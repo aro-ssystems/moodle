@@ -1124,7 +1124,34 @@ $string['timelimit'] = 'Time limit';
 $string['timelimit_help'] = 'If enabled, the time limit is stated on the initial quiz page and a countdown timer is displayed in the quiz navigation block.';
 $string['timelimit_link'] = 'mod/quiz/timing';
 $string['timelimitexeeded'] = 'Sorry! Quiz time limit exceeded!';
+$string['timergrantedextratime'] = 'Granted extra time';
+$string['timernotifydegraded'] = 'Show timer network notifications';
+$string['timernotifydegraded_help'] = 'When enabled, students see warning and error notifications in the page header when the quiz timer cannot sync with the server. Notifications appear in the standard Moodle notification area and do not change the timer layout.';
+$string['timernotifyinherit'] = 'Inherit site default';
+$string['timernotifysuccess'] = 'Show timer recovery success notifications';
+$string['timernotifysuccess_help'] = 'When enabled, students see a brief success notification when timer sync is restored after a network problem. Requires timer network notifications to be enabled.';
+$string['timerstageconfirmstart'] = 'Your attempt will have a time limit. When you start, the timer will begin to count down and cannot be paused. You must finish and <strong>submit</strong> your attempt before it expires. Are you sure you wish to start now?';
+$string['timerstageextra'] = '(You have been granted an extra {$a})';
+$string['timerstagelimits'] = 'Time limits';
+$string['timerstageline'] = '{$a->name}: {$a->duration}';
+$string['timerstagemustsubmitby'] = 'Due by {$a}';
+$string['timerstageparseerror'] = 'Line {$a->line} (\'{$a->input}\') is not in the expected format.';
+$string['timerstages'] = 'Stages';
+$string['timerstagesetting'] = 'Time limit periods';
+$string['timerstagesetting_help'] = 'Each line in order defines one time period. The line starts with the time in the
+form HH:MM:SS, then a space, and then the rest of the line until the end is the name of that time period.
+For example:
+
+03:00:00 Main time<br>
+00:30:00 Submission time<br>
+00:30:00 Emergency extra time';
+$string['timerstageshelp'] = 'Time limit stages for this quiz attempt';
+$string['timerstageunavailable'] = 'Unavailable';
+$string['timersyncerror'] = 'Timer sync failed — display may be inaccurate';
+$string['timersyncrestored'] = 'Timer sync restored';
+$string['timersyncstale'] = 'Timer resyncing…';
 $string['timestr'] = '%H:%M:%S on %d/%m/%y';
+$string['timestring'] = '%%HH%% hours %%MM%% minutes';
 $string['timesup'] = 'Time is up!';
 $string['timing'] = 'Timing';
 $string['tofile'] = 'to file';
