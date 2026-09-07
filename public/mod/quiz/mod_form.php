@@ -150,8 +150,8 @@ class mod_quiz_mod_form extends moodleform_mod {
 
         $notifyoptions = [
             -1 => get_string('timernotifyinherit', 'quiz'),
-            1 => get_string('enabled', 'core'),
-            0 => get_string('disabled', 'core'),
+            1 => get_string('yes'),
+            0 => get_string('no'),
         ];
         $mform->addElement('select', 'timernotifydegraded', get_string('timernotifydegraded', 'quiz'), $notifyoptions);
         $mform->addHelpButton('timernotifydegraded', 'timernotifydegraded', 'quiz');
