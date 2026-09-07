@@ -132,5 +132,44 @@ function xmldb_quiz_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026083100, 'quiz');
     }
 
+    if ($oldversion < 2026090700) {
+        // Define field timernotifydegraded to be added to quiz.
+        $table = new xmldb_table('quiz');
+        $field = new xmldb_field('timernotifydegraded', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'duedate');
+
+        // Conditionally launch add field timernotifydegraded.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field timernotifysuccess to be added to quiz.
+        $field = new xmldb_field('timernotifysuccess', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'timernotifydegraded');
+
+        // Conditionally launch add field timernotifysuccess.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define table quiz_timer_stages to be created.
+        $table = new xmldb_table('quiz_timer_stages');
+
+        // Adding fields to table quiz_timer_stages.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('quizid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('stages', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table quiz_timer_stages.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('quizid', XMLDB_KEY_FOREIGN_UNIQUE, ['quizid'], 'quiz', ['id']);
+
+        // Conditionally launch create table for quiz_timer_stages.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Quiz savepoint reached.
+        upgrade_mod_savepoint(true, 2026090700, 'quiz');
+    }
+
     return true;
 }
