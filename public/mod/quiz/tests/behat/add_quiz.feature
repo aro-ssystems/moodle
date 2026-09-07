@@ -46,6 +46,10 @@ Feature: Add a quiz
 
   @javascript
   Scenario: Add and configure small quiz and perform an attempt as a student with Javascript enabled
+    # Wait for the confirmation dialogue to be fully rendered before interacting with it, to avoid
+    # a flaky race condition on some headless Chrome configurations (was previously worked around
+    # with a non-functional @skip_chrome_zerosize tag that no code actually evaluated).
+    And I wait until the page is ready
     Then I click on "Submit all and finish" "button" in the "Submit all your answers and finish?" "dialogue"
     And I should see "So you think it is true"
     And I should see "Thank you, this is the general feedback"
